@@ -12,7 +12,12 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_STORE_PATH = Path(".chaosrank/outcomes.json")
+import os
+
+if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+    DEFAULT_STORE_PATH = Path("/tmp/.chaosrank/outcomes.json")
+else:
+    DEFAULT_STORE_PATH = Path(".chaosrank/outcomes.json")
 
 
 class OutcomeType(str, Enum):

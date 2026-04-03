@@ -45,6 +45,10 @@ for _router in (
 ):
     app.include_router(_router, prefix="/v1")
 
+# AWS Lambda entry point — Mangum wraps the ASGI app for API Gateway events
+from mangum import Mangum  # noqa: E402
+handler = Mangum(app, lifespan="off")
+
 
 def run() -> None:  # pragma: no cover
     import uvicorn
@@ -59,3 +63,4 @@ def run() -> None:  # pragma: no cover
 
 if __name__ == "__main__":  # pragma: no cover
     run()
+

@@ -29,9 +29,7 @@ router = APIRouter()
 
 # Global AdaptiveRanker instance — state persists across requests.
 # In a multi-worker deployment, use a shared Redis-backed store instead.
-_RANKER = AdaptiveRanker(
-    store_path=Path(".chaosrank/outcomes.json"),
-)
+_RANKER = AdaptiveRanker()
 
 
 def _build_graph(edges: list) -> nx.DiGraph:

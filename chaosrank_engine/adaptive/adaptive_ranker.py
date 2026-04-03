@@ -12,7 +12,7 @@ from pathlib import Path
 import networkx as nx
 
 from chaosrank_engine.adaptive.confidence import compute_all_confidence
-from chaosrank_engine.adaptive.outcome_store import OutcomeStore, OutcomeType
+from chaosrank_engine.adaptive.outcome_store import OutcomeStore, OutcomeType, DEFAULT_STORE_PATH
 from chaosrank_engine.adaptive.weight_updater import WeightUpdater
 from chaosrank_engine.parser.incidents import ServiceIncidents
 from chaosrank_engine.scorer.ranker import rank_services
@@ -35,7 +35,7 @@ class AdaptiveRanker:
         if store is not None and store_path is not None:
             raise ValueError("Provide either store or store_path, not both")
 
-        self.store = store or OutcomeStore(path=store_path or Path(".chaosrank/outcomes.json"))
+        self.store = store or OutcomeStore(path=store_path or DEFAULT_STORE_PATH)
         self.updater = WeightUpdater(
             store=self.store,
             initial_alpha=initial_alpha,
