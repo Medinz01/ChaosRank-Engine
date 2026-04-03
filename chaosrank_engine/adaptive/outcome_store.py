@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
@@ -12,7 +13,6 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-import os
 
 if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
     DEFAULT_STORE_PATH = Path("/tmp/.chaosrank/outcomes.json")

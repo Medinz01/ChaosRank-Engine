@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from pathlib import Path
 
 import networkx as nx
 from fastapi import APIRouter, Depends, HTTPException
