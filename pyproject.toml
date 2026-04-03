@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chaosrank-engine"
+version = "0.2.0"
+description = "ChaosRank scoring engine — risk-driven chaos experiment scheduler"
+requires-python = ">=3.11"
+license = {text = "Business Source License 1.1"}
+authors = [
+    {name = "Manideep Sale", email = "mdsmanideep@gmail.com"}
+]
+dependencies = [
+    "networkx>=3.2",
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "mangum>=0.17",
+    "pydantic>=2.5",
+    "python-jose[cryptography]>=3.3",
+    "ijson>=3.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.26",
+    "respx>=0.20",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+chaosrank-engine = "chaosrank_engine.api.main:run"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["chaosrank_engine*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
