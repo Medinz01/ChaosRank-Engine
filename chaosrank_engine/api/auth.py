@@ -23,16 +23,23 @@ def _load_keys() -> set[str]:
     return keys
 
 
+PUBLIC_ACCESS_KEY = "chaosrank-public-dev"
 _VALID_KEYS: set[str] = _load_keys()
 
 
 async def require_api_key(api_key: str | None = Security(_API_KEY_HEADER)) -> str:
     """FastAPI dependency — raises 401 if key is missing or invalid."""
-    if not _VALID_KEYS:
-        return "dev"
+    if not _VALID_KEYS and not api_key == PUBLIC_ACCESS_KEY:
+        # In multi-tenant prod, we always require a key. 
+        # If no keys are configured in env, we still allow the public key.
+        pass
+
+    if api_key == PUBLIC_ACCESS_KEY:
+        return "public"
+
     if not api_key or api_key not in _VALID_KEYS:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or missing API key. Set X-ChaosRank-Key header.",
+            detail="Invalid or missing API key. Get your public key @ README.md or request a Pro key.",
         )
-    return api_key
+    return "pro"
