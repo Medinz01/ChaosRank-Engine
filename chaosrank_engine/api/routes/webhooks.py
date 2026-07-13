@@ -1,7 +1,7 @@
 
 import logging
 from datetime import datetime, timezone
-from fastapi import APIRouter, Request, status, Depends
+from fastapi import APIRouter, Request, status
 from fastapi.responses import JSONResponse
 
 from chaosrank_engine.api.webhook_manager import webhook_state

@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, timezone
 
 import networkx as nx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from chaosrank_engine.api.models import (
     RankRequest,
