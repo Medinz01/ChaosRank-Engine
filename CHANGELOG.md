@@ -9,9 +9,13 @@ ChaosRank Engine follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ## [0.2.2] — 2026-07-13
 
+### Added
+- **Webhooks & Live Streaming**: Introduced `WebhookManager` and the `/webhooks` API endpoints to support direct incident streaming from alerting systems (PagerDuty, Datadog, Opsgenie).
+- **Async Topology Parsers**: Added native parsers for `asyncapi` and `kafka` topologies directly in the engine, allowing asynchronous edge processing without CLI translation.
+
 ### Changed
-- **Open BSL Architecture Transition**: Completely removed API keys, rate limiters, and proprietary SaaS restrictions to prepare the engine for open self-hosted distribution on PyPI.
-- **Code Quality**: Removed unused `fastapi.Depends` dependency injections to resolve `ruff` lint errors following the authorization removal.
+- **Federation & Adaptive Improvements**: Refined graph merging and correlation functions in `chaosrank_engine/federation/`, and optimized the Bayesian `adaptive` models by removing legacy outcome store dependencies.
+- **Open BSL Architecture**: Completely removed API keys, `slowapi` rate limiters, and proprietary SaaS authentication. The engine is now completely open for self-hosted distribution.
 
 ---
 
@@ -19,14 +23,11 @@ ChaosRank Engine follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ### Added
 - **AWS Lambda Support**: Implemented writable `/tmp` storage support for serverless execution of the engine.
-- **API Tiers (Deprecated)**: Implemented Public and Pro API tier logic, including `slowapi` rate limiting.
-
-### Fixed
-- Resolved `ruff` lint errors in `outcome_store` and adaptive routing modules.
+- **API Tiers**: Added Public and Pro API tier logic, including `slowapi` rate limiting. *(Note: This system has been deprecated and removed in 0.2.2)*.
 
 ---
 
 ## [0.2.0] — 2026-06-21
 
 ### Added
-- **Initial Core Engine Release**: Extracted the proprietary algorithms (Blast Radius, Fragility, Adaptive Scoring, Federation) from the CLI into this dedicated backend REST API.
+- **Initial Core Engine Release**: Extracted the proprietary algorithms (Blast Radius, Fragility, Adaptive Scoring, and Federation) from the CLI into this dedicated backend REST API.
