@@ -16,6 +16,11 @@ RUN pip install --no-cache-dir -e "."
 # Outcomes store directory (adaptive state persistence)
 RUN mkdir -p .chaosrank
 
+# Security: run as non-root user
+RUN useradd --create-home --shell /bin/bash appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
 EXPOSE 8080
 
 ENV HOST=0.0.0.0

@@ -8,9 +8,8 @@ import logging
 from datetime import datetime, timezone
 
 import networkx as nx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from chaosrank_engine.api.auth import require_api_key
 from chaosrank_engine.api.models import (
     FederationRankRequest,
     FederationRankResponse,
@@ -32,8 +31,8 @@ def _qualify(component_id: str, domain_id: str) -> str:
 
 @router.post("/federation/rank", response_model=FederationRankResponse)
 async def federation_rank(
+    request: Request,
     req: FederationRankRequest,
-    _: str = Depends(require_api_key),
 ) -> FederationRankResponse:
     """Merge multiple domain graphs and perform federated risk ranking."""
     if not req.domains:
@@ -116,7 +115,7 @@ async def federation_rank(
         )
     except Exception as exc:
         logger.exception("Federation rank failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Internal scoring error. See server logs.") from exc
 
     if cfg.top_n > 0:
         ranked_raw = ranked_raw[: cfg.top_n]

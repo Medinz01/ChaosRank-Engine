@@ -7,9 +7,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from chaosrank_engine.api.auth import require_api_key
 from chaosrank_engine.api.models import (
     MergeRequest,
     MergeResponse,
@@ -25,8 +24,8 @@ router = APIRouter()
 
 @router.post("/orchestration/merge", response_model=MergeResponse)
 async def merge_snapshots(
+    request: Request,
     req: MergeRequest,
-    _: str = Depends(require_api_key),
 ) -> MergeResponse:
     """Consolidate multiple agent snapshots into a unified canonical graph."""
     if not req.snapshots:
@@ -64,7 +63,7 @@ async def merge_snapshots(
         result = merger.merge()
     except Exception as exc:
         logger.exception("Merge failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Internal merge error. See server logs.") from exc
 
     # Serialize canonical graph back to EdgePayload list
     canonical_edges = [

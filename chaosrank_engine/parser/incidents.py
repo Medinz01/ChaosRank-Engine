@@ -4,7 +4,7 @@ Provides structures for representing and loading historical service incidents.
 import csv
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ class Incident:
 
     @property
     def age_days(self) -> float:
-        return (datetime.utcnow() - self.timestamp).total_seconds() / 86400
+        return (datetime.now(timezone.utc) - self.timestamp).total_seconds() / 86400
 
     def severity_weight(self, weights: dict[str, float] = DEFAULT_SEVERITY_WEIGHTS) -> float:
         return weights.get(self.severity.lower(), DEFAULT_SEVERITY_WEIGHTS["low"])

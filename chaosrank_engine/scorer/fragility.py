@@ -4,7 +4,7 @@ Computes a normalized vulnerability score based on incident history and traffic 
 import logging
 import math
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 
 from chaosrank_engine.parser.incidents import Incident, ServiceIncidents
 
@@ -122,7 +122,7 @@ def compute_fragility(
     """Compute normalized [0, 1] fragility scores for all services."""
     weights = severity_weights or DEFAULT_SEVERITY_WEIGHTS
     baseline = _baseline_volume(service_incidents)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     raw_scores: dict[str, float] = {}
 
@@ -138,7 +138,12 @@ def compute_fragility(
 
         for inc in logical:
             w = _weighted_incident(inc, weights, window_avg)
-            age = (now - inc.timestamp).total_seconds() / 86400
+            ts = inc.timestamp
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            else:
+                ts = ts.astimezone(timezone.utc)
+            age = (now - ts).total_seconds() / 86400
             total += w * math.exp(-decay_lambda * age)
 
         raw_scores[service] = total

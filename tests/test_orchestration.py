@@ -4,7 +4,7 @@ delta-triggered streaming scoring.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import networkx as nx
 import pytest
@@ -53,7 +53,7 @@ def _snapshot(
     ]
     return LocalGraphSnapshot(
         agent_id=agent_id,
-        observed_at=observed_at or datetime.utcnow(),
+        observed_at=observed_at or datetime.now(timezone.utc),
         total_spans=total_spans,
         edges=obs,
     )
@@ -85,7 +85,7 @@ def _merge_result(
         graph=G,
         canonical_edges=canonical,
         agent_count=1,
-        snapshot_times={"test-agent": datetime.utcnow()},
+        snapshot_times={"test-agent": datetime.now(timezone.utc)},
     )
 
 
@@ -103,7 +103,7 @@ class TestLocalGraphSnapshot:
         assert G["prod"]["cons"]["edge_type"] == "async"
 
     def test_snapshot_attributes(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         snap = _snapshot("region-1", total_spans=5000, observed_at=now)
         assert snap.agent_id == "region-1"
         assert snap.total_spans == 5000
@@ -258,7 +258,7 @@ class TestIncrementalGraphState:
             target=es.target,
             weight=es.weight,
             edge_type=es.edge_type,
-            last_observed=datetime.utcnow() - timedelta(days=2),
+            last_observed=datetime.now(timezone.utc) - timedelta(days=2),
             first_observed=es.first_observed,
             update_count=es.update_count,
         )
@@ -277,7 +277,7 @@ class TestIncrementalGraphState:
             target=edge_state.target,
             weight=edge_state.weight,
             edge_type=edge_state.edge_type,
-            last_observed=datetime.utcnow() - timedelta(days=10),
+            last_observed=datetime.now(timezone.utc) - timedelta(days=10),
             first_observed=edge_state.first_observed,
             update_count=edge_state.update_count,
         )

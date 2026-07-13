@@ -7,9 +7,8 @@ import logging
 from datetime import datetime, timezone
 
 import networkx as nx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
-from chaosrank_engine.api.auth import require_api_key
 from chaosrank_engine.api.models import (
     RankRequest,
     RankResponse,
@@ -60,8 +59,8 @@ def _build_incidents(req: RankRequest) -> dict[str, ServiceIncidents]:
 
 @router.post("/rank", response_model=RankResponse)
 async def rank(
+    request: Request,
     req: RankRequest,
-    _: str = Depends(require_api_key),
 ) -> RankResponse:
     """Compute risk scores and ranking for the provided system state."""
     cfg = req.config
@@ -93,7 +92,7 @@ async def rank(
         )
     except Exception as exc:
         logger.exception("blast_radius computation failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Internal scoring error. See server logs.") from exc
 
     try:
         ranked_raw = rank_services(
@@ -107,7 +106,7 @@ async def rank(
         )
     except Exception as exc:
         logger.exception("rank_services failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Internal scoring error. See server logs.") from exc
 
     if cfg.top_n > 0:
         ranked_raw = ranked_raw[: cfg.top_n]

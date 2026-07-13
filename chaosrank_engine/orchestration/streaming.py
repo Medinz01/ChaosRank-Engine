@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 import networkx as nx
@@ -16,10 +16,8 @@ from chaosrank_engine.orchestration.incremental import IncrementalUpdateResult
 
 logger = logging.getLogger(__name__)
 
-# Fraction of edges changed that triggers a full recomputation
 FULL_RECOMPUTE_THRESHOLD = 0.30
 
-# Minimum absolute weight delta to consider an edge "significantly changed"
 MIN_DELTA_FOR_TRIGGER = 5.0
 
 
@@ -37,7 +35,7 @@ class StreamingRankResult:
     updated_nodes: list[str]
     strategy_used: RecomputeStrategy
     full_graph_size: int
-    recomputed_at: datetime = field(default_factory=datetime.utcnow)
+    recomputed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     change_magnitude: float = 0.0
 
 
@@ -61,7 +59,6 @@ class StreamingScorer:
         self._cached_scores: dict[str, float] = {}
         self._cached_graph: nx.DiGraph | None = None
 
-    # Update API
 
     def update(
         self,
@@ -107,7 +104,7 @@ class StreamingScorer:
         elif strategy == RecomputeStrategy.NEIGHBORHOOD:
             return self._neighborhood_recompute(G, update, change_magnitude)
 
-        else:  # DELTA
+        else:
             return self._delta_recompute(G, update, change_magnitude)
 
     def force_full_recompute(self, G: nx.DiGraph) -> StreamingRankResult:
@@ -119,7 +116,6 @@ class StreamingScorer:
         """Current cached blast radius scores."""
         return dict(self._cached_scores)
 
-    # Strategy selection
 
     def _select_strategy(
         self,
@@ -129,11 +125,9 @@ class StreamingScorer:
     ) -> RecomputeStrategy:
         """Auto-select recompute strategy based on change characteristics."""
 
-        # No cached scores yet — must do full
         if not self._cached_scores:
             return RecomputeStrategy.FULL
 
-        # Large topology change — full recomputation
         if change_magnitude >= self.full_recompute_threshold:
             logger.debug(
                 "Strategy: FULL (change_magnitude=%.2f >= threshold=%.2f)",
@@ -142,7 +136,6 @@ class StreamingScorer:
             )
             return RecomputeStrategy.FULL
 
-        # Any topology changes (new nodes/edges or pruned) → neighborhood
         if update.edges_added or update.edges_pruned:
             logger.debug(
                 "Strategy: NEIGHBORHOOD (+%d added, -%d pruned)",
@@ -151,7 +144,6 @@ class StreamingScorer:
             )
             return RecomputeStrategy.NEIGHBORHOOD
 
-        # Weight-only changes → delta
         logger.debug(
             "Strategy: DELTA (%d edges updated, %d attenuated)",
             len(update.edges_updated),
@@ -159,7 +151,6 @@ class StreamingScorer:
         )
         return RecomputeStrategy.DELTA
 
-    # Recompute implementations
 
     def _full_recompute(
         self,
@@ -206,12 +197,9 @@ class StreamingScorer:
         """
         affected = self._affected_nodes(G, update)
 
-        # If affected set is large relative to total, just do full
         if len(affected) / max(G.number_of_nodes(), 1) > 0.5:
             return self._full_recompute(G, change_magnitude)
 
-        # Recompute full scores (PageRank is global so we can't do partial)
-        # but only update cached scores for affected nodes
         full_scores = compute_blast_radius(
             G,
             w_pr=self.w_pr,
@@ -222,10 +210,10 @@ class StreamingScorer:
         updated_nodes = []
         for node in affected:
             if node in full_scores:
-                self._cached_scores[node] = full_scores[node]
                 updated_nodes.append(node)
 
-        # Remove pruned nodes from cache
+        self._cached_scores.update(full_scores)
+
         for source, target in update.edges_pruned:
             for node in (source, target):
                 if node not in G and node in self._cached_scores:
@@ -261,7 +249,6 @@ class StreamingScorer:
         if not self._cached_graph:
             return self._full_recompute(G, change_magnitude)
 
-        # Compute total absolute weight delta across updated edges
         total_delta = 0.0
         for source, target in update.edges_updated:
             if self._cached_graph.has_edge(source, target) and G.has_edge(source, target):
@@ -283,10 +270,8 @@ class StreamingScorer:
                 change_magnitude=change_magnitude,
             )
 
-        # Delta is significant — do a full recompute
         return self._full_recompute(G, change_magnitude)
 
-    # Internal helpers
 
     def _affected_nodes(
         self,
@@ -303,7 +288,6 @@ class StreamingScorer:
             directly_affected.add(source)
             directly_affected.add(target)
 
-        # Also include in-degree neighbors (their PageRank flows changed)
         neighbors: set[str] = set()
         for node in directly_affected:
             if node in G:

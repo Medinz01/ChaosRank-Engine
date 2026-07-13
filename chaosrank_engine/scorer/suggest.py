@@ -4,7 +4,7 @@ Analyzes effective incidents to recommend the most relevant chaos experiment typ
 import logging
 import math
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 
 from chaosrank_engine.parser.incidents import Incident, ServiceIncidents
 
@@ -31,8 +31,18 @@ def _effective_incidents(
 ) -> list[Incident]:
     """Filter incidents that are statistically relevant based on the decay factor."""
     threshold_days = -math.log(0.05) / decay_lambda
-    now_ts = datetime.utcnow()
-    return [i for i in incidents if (now_ts - i.timestamp).total_seconds() / 86400 < threshold_days]
+    now_ts = datetime.now(timezone.utc)
+    
+    result = []
+    for i in incidents:
+        ts = i.timestamp
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        else:
+            ts = ts.astimezone(timezone.utc)
+        if (now_ts - ts).total_seconds() / 86400 < threshold_days:
+            result.append(i)
+    return result
 
 
 def _confidence(effective_n: int, purity: float) -> str:

@@ -47,9 +47,6 @@ from chaosrank_engine.graph.builder import build_graph
 from chaosrank_engine.parser.incidents import parse_incidents
 from chaosrank_engine.scorer.ranker import rank_services
 
-# ---------------------------------------------------------------------------
-# Defaults
-# ---------------------------------------------------------------------------
 
 DEFAULT_TRACES = Path("benchmarks/real_traces/social_network.json")
 DEFAULT_INCIDENTS = Path("benchmarks/real_traces/social_network_incidents.csv")
@@ -62,9 +59,6 @@ ALPHA_SWEEP = [round(v, 2) for v in np.arange(0.4, 0.81, 0.05)]
 W_PR_SWEEP = [round(v, 2) for v in np.arange(0.3, 0.71, 0.05)]
 
 
-# ---------------------------------------------------------------------------
-# Core helpers
-# ---------------------------------------------------------------------------
 
 
 def _ranking(blast: dict[str, float], incidents: dict, alpha: float) -> list[str]:
@@ -98,9 +92,6 @@ def _tau(ranking_a: list[str], ranking_b: list[str]) -> float:
     return round(float(tau), 4)
 
 
-# ---------------------------------------------------------------------------
-# Sweeps
-# ---------------------------------------------------------------------------
 
 
 def sweep_alpha(
@@ -148,9 +139,6 @@ def sweep_w_pr(
     return rows
 
 
-# ---------------------------------------------------------------------------
-# Output
-# ---------------------------------------------------------------------------
 
 
 def _write_csv(rows: list[dict], path: Path) -> None:
@@ -254,15 +242,12 @@ def _write_summary(
     )
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     print(f"  Written: {path}")
     print()
     print("\n".join(lines))
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 
 
 def main() -> None:

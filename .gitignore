@@ -1,7 +1,8 @@
-﻿__pycache__/
+__pycache__/
 *.py[cod]
 *.class
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 dist/
@@ -9,3 +10,10 @@ build/
 *.egg-info/
 .env
 chaosrank.yaml
+
+# Lambda deployment artifacts (rebuild with scripts)
+deployment_package.zip
+*.zip
+
+# Runtime state
+.chaosrank/

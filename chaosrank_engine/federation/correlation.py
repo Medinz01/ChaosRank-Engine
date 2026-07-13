@@ -14,14 +14,10 @@ from chaosrank_engine.parser.incidents import ServiceIncidents
 
 logger = logging.getLogger(__name__)
 
-# Default co-occurrence window for incident correlation
 DEFAULT_CORRELATION_WINDOW_MINUTES = 30
 
-# Minimum co-occurrence count to consider a correlation signal
 MIN_COOCCURRENCE_COUNT = 2
 
-# Propagation confidence is scaled by path weight (sum of edge weights on path)
-# This normalizer prevents unbounded confidence values
 PATH_WEIGHT_NORMALIZER = 1000.0
 
 
@@ -75,19 +71,10 @@ def correlate_incidents(
             root_cause_candidates=[],
         )
 
-    # Step 1 — build incident time buckets per service
     buckets = _build_time_buckets(service_incidents, correlation_window)
-
-    # Step 2 — compute co-occurrence matrix
     cooccurrence = _compute_cooccurrence(buckets)
-
-    # Step 3 — filter by graph path existence and compute propagation confidence
     links = _compute_propagation_links(G, cooccurrence, min_cooccurrence)
-
-    # Step 4 — adjust risk scores for propagation sources
     adjusted_risks = _adjust_risks(base_risks, links)
-
-    # Step 5 — rank root cause candidates by total outbound propagation confidence
     root_cause_candidates = _rank_root_causes(links)
 
     if links:
@@ -106,7 +93,6 @@ def correlate_incidents(
     )
 
 
-# Internal correlation logic
 
 
 def _build_time_buckets(
@@ -124,7 +110,6 @@ def _build_time_buckets(
 
     for service, si in service_incidents.items():
         for incident in si.incidents:
-            # Convert timestamp to bucket index
             bucket = int(incident.timestamp.timestamp()) // window_seconds
             buckets[service].add(bucket)
 
@@ -175,14 +160,11 @@ def _compute_propagation_links(
         if count < min_cooccurrence:
             continue
 
-        # Check directed path existence
         path_exists = nx.has_path(G, source, target) if (source in G and target in G) else False
 
         path_weight = 0.0
         if path_exists:
             try:
-                # Use shortest path weighted by inverse of edge weight
-                # (higher weight = shorter path = stronger propagation)
                 path = nx.shortest_path(G, source, target, weight=None)
                 path_weight = sum(
                     G[path[i]][path[i + 1]].get("weight", 1.0) for i in range(len(path) - 1)
@@ -207,7 +189,6 @@ def _compute_propagation_links(
             )
         )
 
-    # Sort by confidence descending
     links.sort(key=lambda link: link.propagation_confidence, reverse=True)
     return links
 
@@ -227,7 +208,6 @@ def _adjust_risks(
     if not links:
         return dict(base_risks)
 
-    # Sum outbound propagation confidence per source
     outbound_confidence: dict[str, float] = defaultdict(float)
     for link in links:
         outbound_confidence[link.source] += link.propagation_confidence

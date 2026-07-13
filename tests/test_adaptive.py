@@ -5,7 +5,7 @@ interval calculations.
 from __future__ import annotations
 
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import networkx as nx
@@ -70,7 +70,7 @@ def _make_incidents(service: str, count: int):
     """Return a real ServiceIncidents with `count` Incident objects."""
     from chaosrank_engine.parser.incidents import Incident, ServiceIncidents
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     incidents = [
         Incident(
             timestamp=now - timedelta(days=i),
@@ -163,9 +163,14 @@ class TestWeightUpdater:
     def test_no_update_below_min_outcomes(self):
         store = _tmp_store()
         updater = WeightUpdater(store, initial_alpha=0.6)
+        # When MIN_OUTCOMES_BEFORE_UPDATE <= 1 there is no "below minimum" case
+        if MIN_OUTCOMES_BEFORE_UPDATE <= 1:
+            pytest.skip("MIN_OUTCOMES_BEFORE_UPDATE=1: no below-minimum scenario to test")
         # Record fewer than MIN_OUTCOMES_BEFORE_UPDATE
+        rec = None
         for _ in range(MIN_OUTCOMES_BEFORE_UPDATE - 1):
             rec = _record(store, OutcomeType.WEAKNESS_CONFIRMED)
+        assert rec is not None, "Loop did not execute — MIN_OUTCOMES_BEFORE_UPDATE must be >= 2"
         updater.update(rec)
         assert updater.alpha == pytest.approx(0.6, abs=1e-6)
 
@@ -255,9 +260,6 @@ class TestWeightUpdater:
             updater1.update(rec)
         alpha_after = updater1.alpha
 
-        # Rehydration replays outcomes sequentially from default alpha=0.6.
-        # Result is directionally correct (below 0.6) but not numerically
-        # identical to the incremental path — both should be below 0.6.
         store2 = OutcomeStore(path=path)
         updater2 = WeightUpdater(store2, initial_alpha=0.6, learning_rate=0.1)
         assert updater2.alpha < 0.6
@@ -308,7 +310,7 @@ class TestConfidence:
             0.7,
             G,
             si,
-            last_observed=datetime.utcnow() - timedelta(days=STALENESS_THRESHOLD_DAYS + 5),
+            last_observed=datetime.now(timezone.utc) - timedelta(days=STALENESS_THRESHOLD_DAYS + 5),
         )
         assert stale.ci_width > fresh.ci_width
         assert stale.age_component == pytest.approx(1.0, abs=1e-4)
@@ -502,8 +504,6 @@ class TestAdaptiveRanker:
             ranker1.record_outcome(ranked[0], OutcomeType.WEAKNESS_CONFIRMED)
         alpha_after = ranker1.alpha
 
-        # New ranker from same store path — rehydration is directionally
-        # correct: both should have moved below 0.6 from confirmations
         store2 = OutcomeStore(path=path)
         ranker2 = AdaptiveRanker(store=store2, initial_alpha=0.6, learning_rate=0.1)
         assert ranker2.alpha < 0.6

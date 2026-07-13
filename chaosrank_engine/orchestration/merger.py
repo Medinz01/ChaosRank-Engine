@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 import networkx as nx
 
@@ -39,7 +39,7 @@ class MergeResult:
     agent_count: int
     snapshot_times: dict[str, datetime]
     warnings: list[str] = field(default_factory=list)
-    merged_at: datetime = field(default_factory=datetime.utcnow)
+    merged_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     @property
     def single_agent_edge_count(self) -> int:
@@ -183,7 +183,7 @@ class CentralMerger:
         Returns None if the canonical weight falls below min_call_frequency.
         """
         total_confidence = sum(obs.confidence for obs in observations)
-        [obs.source for obs in observations]
+
 
         if total_confidence <= 0:
             return None

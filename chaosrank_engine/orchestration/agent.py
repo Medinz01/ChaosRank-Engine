@@ -4,7 +4,7 @@ into the central canonical graph.
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 import networkx as nx
 
 
@@ -24,7 +24,7 @@ class LocalGraphSnapshot:
     agent_id: str
     total_spans: int
     edges: list[EdgeObservation]
-    observed_at: datetime = field(default_factory=datetime.utcnow)
+    observed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     scope_metadata: dict = field(default_factory=dict)
 
     def to_graph(self) -> nx.DiGraph:

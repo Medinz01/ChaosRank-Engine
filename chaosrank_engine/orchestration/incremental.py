@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 import networkx as nx
 
@@ -14,19 +14,12 @@ from chaosrank_engine.orchestration.merger import MergeResult
 
 logger = logging.getLogger(__name__)
 
-# EMA smoothing factor — higher = more responsive to new observations
-# 0.3 = roughly 3-window moving average
 DEFAULT_EMA_ALPHA = 0.3
 
-# Staleness: edges attenuate by this factor per day of non-observation
-# 0.85^7 ≈ 0.32 — edge at 32% weight after one week without observation
 DEFAULT_STALENESS_FACTOR = 0.85
 
-# Edges below this weight are pruned from the graph
 DEFAULT_MIN_WEIGHT = 1.0
 
-# Days after which an edge is considered fully stale and eligible for pruning
-# regardless of weight (emergency floor)
 MAX_STALE_DAYS = 30.0
 
 
@@ -46,11 +39,11 @@ class EdgeState:
 
     @property
     def age_days(self) -> float:
-        return (datetime.utcnow() - self.first_observed).total_seconds() / 86400
+        return (datetime.now(timezone.utc) - self.first_observed).total_seconds() / 86400
 
     @property
     def stale_days(self) -> float:
-        return (datetime.utcnow() - self.last_observed).total_seconds() / 86400
+        return (datetime.now(timezone.utc) - self.last_observed).total_seconds() / 86400
 
 
 @dataclass
@@ -62,7 +55,7 @@ class IncrementalUpdateResult:
     edges_updated: list[tuple[str, str]]
     edges_pruned: list[tuple[str, str]]
     edges_attenuated: list[tuple[str, str]]
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class IncrementalGraphState:
@@ -86,7 +79,6 @@ class IncrementalGraphState:
         self._edge_states: dict[tuple[str, str], EdgeState] = {}
         self._last_update: datetime | None = None
 
-    # Update API
 
     def apply(self, merge_result: MergeResult) -> IncrementalUpdateResult:
         """
@@ -99,7 +91,7 @@ class IncrementalGraphState:
 
         Returns IncrementalUpdateResult with the updated graph.
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         observed_edges = {(e.source, e.target) for e in merge_result.canonical_edges}
 
         edges_added: list[tuple[str, str]] = []
@@ -107,12 +99,10 @@ class IncrementalGraphState:
         edges_attenuated: list[tuple[str, str]] = []
         edges_pruned: list[tuple[str, str]] = []
 
-        # Step 1 — update or add observed edges
         for edge in merge_result.canonical_edges:
             key = (edge.source, edge.target)
 
             if key in self._edge_states:
-                # EMA update
                 old_state = self._edge_states[key]
                 new_weight = (
                     self.ema_alpha * edge.canonical_weight
@@ -131,7 +121,6 @@ class IncrementalGraphState:
                 )
                 edges_updated.append(key)
             else:
-                # New edge
                 self._edge_states[key] = EdgeState(
                     source=edge.source,
                     target=edge.target,
@@ -145,13 +134,11 @@ class IncrementalGraphState:
                 )
                 edges_added.append(key)
 
-        # Step 2 — attenuate edges not in this merge result
         stale_keys = set(self._edge_states.keys()) - observed_edges
         for key in stale_keys:
             state = self._edge_states[key]
             stale_days = state.stale_days
 
-            # Attenuation: compound staleness_factor per day
             attenuation = self.staleness_factor**stale_days
             new_weight = state.weight * attenuation
 
@@ -181,7 +168,6 @@ class IncrementalGraphState:
 
         self._last_update = now
 
-        # Step 3 — build updated graph
         G = self._build_graph()
 
         if edges_pruned:
@@ -223,7 +209,6 @@ class IncrementalGraphState:
     def last_update(self) -> datetime | None:
         return self._last_update
 
-    # Internal graph construction
 
     def _build_graph(self) -> nx.DiGraph:
         G = nx.DiGraph()

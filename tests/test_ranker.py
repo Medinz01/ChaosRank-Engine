@@ -4,7 +4,7 @@ logic based on combined blast radius and fragility signals.
 """
 from __future__ import annotations
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -27,7 +27,7 @@ def make_si(
     si = ServiceIncidents(service=service)
     si.incidents = [
         Incident(
-            timestamp=datetime.utcnow() - timedelta(days=days_ago + i),
+            timestamp=datetime.now(timezone.utc) - timedelta(days=days_ago + i),
             service=service,
             type=inc_type,
             severity=severity,

@@ -102,10 +102,6 @@ class DomainRegistry:
                 errors.append(f"[{domain_id}] GraphSourceAdapter.build_graph() raised: {exc}")
                 domain_node_sets[domain_id] = set()
 
-        # Check 2 — cross-domain node ID collision detection
-        # Collision: same component_id appears in two different domains
-        # without an explicit inter-domain edge declaration.
-        # This is usually a normalization error.
         all_ids: list[tuple[str, str]] = []  # (domain_id, node_id)
         for domain_id, nodes in domain_node_sets.items():
             for node in nodes:

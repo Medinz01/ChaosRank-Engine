@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chaosrank-engine"
-version = "0.2.0"
+version = "0.2.2"
 description = "ChaosRank scoring engine — risk-driven chaos experiment scheduler"
 requires-python = ">=3.11"
 license = {text = "Business Source License 1.1"}
@@ -21,6 +21,8 @@ dependencies = [
     "pydantic>=2.5",
     "python-jose[cryptography]>=3.3",
     "ijson>=3.2",
+    "pyyaml>=6.0",
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]

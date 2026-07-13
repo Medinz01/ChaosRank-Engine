@@ -6,7 +6,7 @@ from __future__ import annotations
 import logging
 
 # import math
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -29,7 +29,7 @@ def make_incident(
     request_volume: float | None = 1000.0,
 ) -> Incident:
     return Incident(
-        timestamp=datetime.utcnow() - timedelta(days=days_ago),
+        timestamp=datetime.now(timezone.utc) - timedelta(days=days_ago),
         service=service,
         type=type,
         severity=severity,
@@ -46,7 +46,7 @@ def make_service_incidents(service: str, incidents: list[Incident]) -> ServiceIn
 class TestBurstDedup:
     def test_collapses_same_type_within_window(self):
         """window = 5.0 * log(2) ≈ 3.47 min; three errors 1 min apart at traffic == baseline collapse to one."""
-        base = datetime.utcnow() - timedelta(days=1)
+        base = datetime.now(timezone.utc) - timedelta(days=1)
         incidents = [
             Incident(base, "svc", "error", "high", 1000.0),
             Incident(base + timedelta(minutes=1), "svc", "error", "high", 1000.0),
@@ -56,7 +56,7 @@ class TestBurstDedup:
         assert len(result) == 1
 
     def test_preserves_incidents_outside_window(self):
-        base = datetime.utcnow() - timedelta(days=1)
+        base = datetime.now(timezone.utc) - timedelta(days=1)
         incidents = [
             Incident(base, "svc", "error", "high", 100.0),
             Incident(base + timedelta(minutes=10), "svc", "error", "high", 100.0),
@@ -65,7 +65,7 @@ class TestBurstDedup:
         assert len(result) == 2
 
     def test_different_types_not_collapsed(self):
-        base = datetime.utcnow() - timedelta(days=1)
+        base = datetime.now(timezone.utc) - timedelta(days=1)
         incidents = [
             Incident(base, "svc", "error", "high", 100.0),
             Incident(base + timedelta(minutes=1), "svc", "latency", "high", 100.0),

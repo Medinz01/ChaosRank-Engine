@@ -7,9 +7,10 @@ import json
 import logging
 import os
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ class OutcomeStore:
     def __init__(self, path: Path = DEFAULT_STORE_PATH) -> None:
         self.path = path
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.Lock()
         self._records: list[InterventionRecord] = []
         self._load()
 
@@ -82,7 +84,7 @@ class OutcomeStore:
         rec = InterventionRecord(
             service=service,
             outcome=outcome,
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             risk_score=round(risk_score, 6),
             blast_radius=round(blast_radius, 6),
             fragility=round(fragility, 6),
@@ -94,8 +96,9 @@ class OutcomeStore:
             graph_state_hash=graph_state_hash,
             notes=notes,
         )
-        self._records.append(rec)
-        self._save()
+        with self._lock:
+            self._records.append(rec)
+            self._save()
         logger.info(
             "Recorded outcome %s for service %s (rank %d, risk=%.4f)",
             outcome.value,

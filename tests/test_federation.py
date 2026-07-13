@@ -4,7 +4,7 @@ validation, and incident correlation.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import networkx as nx
 import pytest
@@ -113,7 +113,7 @@ def _make_incident(
 ) -> DomainIncident:
     return DomainIncident(
         component_id=component_id,
-        timestamp=timestamp or datetime.utcnow() - timedelta(days=1),
+        timestamp=timestamp or datetime.now(timezone.utc) - timedelta(days=1),
         severity=severity,
         type="error",
         request_volume=1000.0,
@@ -374,7 +374,7 @@ class TestFederatedGraphBuilder:
             builder.build()
 
     def test_incidents_collected_with_qualified_ids(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         inc = _make_incident("svc-a", "cloud", timestamp=now - timedelta(days=1))
         reg = DomainRegistry()
         reg.register(_make_bundle("cloud", incidents=[inc]))
@@ -385,7 +385,7 @@ class TestFederatedGraphBuilder:
         assert len(result.service_incidents["cloud/svc-a"].incidents) == 1
 
     def test_load_metric_populates_request_volume(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         # Incident with no request_volume — should be populated by LoadMetricAdapter
         inc = DomainIncident(
             component_id="svc-a",
@@ -405,7 +405,7 @@ class TestFederatedGraphBuilder:
         assert si.incidents[0].request_volume == 1000.0  # from StubLoadAdapter
 
     def test_no_load_metric_leaves_none_volume(self):
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         inc = DomainIncident(
             component_id="svc-a",
             timestamp=now - timedelta(days=1),
@@ -482,7 +482,7 @@ class TestCorrelation:
 
     def test_no_cooccurrence_no_links(self):
         G = self._base_graph()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         # svc-a incidents in hour 0, svc-b incidents in hour 5 — no overlap
         si = {
             "svc-a": _make_service_incidents("svc-a", [now - timedelta(hours=10)]),
@@ -494,7 +494,7 @@ class TestCorrelation:
 
     def test_cooccurrence_with_path_creates_link(self):
         G = self._base_graph()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         # Both services have incidents at the same time → same bucket
         ts = now - timedelta(hours=1)
         si = {
@@ -512,7 +512,7 @@ class TestCorrelation:
 
     def test_cooccurrence_without_path_no_link(self):
         G = self._base_graph()  # svc-a → svc-b → svc-c, no reverse edges
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         ts = now - timedelta(hours=1)
         # svc-c and svc-a co-occur but no path svc-c → svc-a
         si = {
@@ -531,7 +531,7 @@ class TestCorrelation:
 
     def test_risk_elevated_for_propagation_source(self):
         G = self._base_graph()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         ts = now - timedelta(hours=1)
         si = {
             "svc-a": _make_service_incidents(
@@ -544,15 +544,13 @@ class TestCorrelation:
         }
         base = {"svc-a": 0.5, "svc-b": 0.6}
         result = correlate_incidents(G, si, base, correlation_window=30, min_cooccurrence=2)
-        # svc-a is the source — its risk should be elevated or unchanged
-        # (only elevated if confidence > 0)
         assert result.adjusted_risks["svc-a"] >= base["svc-a"]
 
     def test_root_cause_candidates_ordered_by_confidence(self):
         G = nx.DiGraph()
         G.add_edge("root", "child-a", weight=200.0)
         G.add_edge("root", "child-b", weight=150.0)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         ts = now - timedelta(hours=1)
         si = {
             "root": _make_service_incidents(
@@ -575,7 +573,7 @@ class TestCorrelation:
     def test_adjusted_risks_clamped_to_one(self):
         G = nx.DiGraph()
         G.add_edge("a", "b", weight=10000.0)  # very high weight
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         ts = now - timedelta(hours=1)
         si = {
             "a": _make_service_incidents("a", [ts] * 10),

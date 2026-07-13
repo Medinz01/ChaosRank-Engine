@@ -6,15 +6,23 @@ from __future__ import annotations
 import logging
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-
-from chaosrank_engine.api.routes import rank, adaptive, orchestration, federation, health
+from fastapi.responses import JSONResponse
+from chaosrank_engine.api.routes import rank, adaptive, orchestration, federation, health, webhooks
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
     format="%(asctime)s %(levelname)s %(name)s — %(message)s",
 )
+
+_ENV = os.environ.get("ENV", "development")
+_is_prod = _ENV == "production"
+
+# Maximum request body size (10 MB). Prevents memory exhaustion from oversized payloads.
+_MAX_BODY_BYTES = int(os.environ.get("MAX_BODY_BYTES", 10 * 1024 * 1024))
+
+
 
 app = FastAPI(
     title="ChaosRank Engine",
@@ -24,16 +32,36 @@ app = FastAPI(
         "returns ranked services with chaos experiment recommendations."
     ),
     version="0.1.0",
-    docs_url="/docs",  # disable in prod: set to None
-    redoc_url="/redoc",
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
 )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=os.environ.get("CORS_ORIGINS", "*").split(","),
-    allow_methods=["POST", "GET"],
-    allow_headers=["X-ChaosRank-Key", "Content-Type"],
-)
+
+
+# CORS: deny-by-default. Set CORS_ORIGINS env var to a comma-separated allowlist.
+_cors_origins_raw = os.environ.get("CORS_ORIGINS", "http://localhost:5173" if not _is_prod else "")
+_cors_origins = [o.strip() for o in _cors_origins_raw.split(",") if o.strip()]
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_methods=["POST", "GET"],
+        allow_headers=["Content-Type"],
+    )
+
+
+@app.middleware("http")
+async def _limit_request_body(request: Request, call_next):
+    """Reject requests with bodies exceeding MAX_BODY_BYTES."""
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > _MAX_BODY_BYTES:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": f"Request body too large. Maximum: {_MAX_BODY_BYTES} bytes."},
+        )
+    return await call_next(request)
+
+
 
 # Mount all routers under /v1
 for _router in (
@@ -42,6 +70,7 @@ for _router in (
     orchestration.router,
     federation.router,
     health.router,
+    webhooks.router,
 ):
     app.include_router(_router, prefix="/v1")
 

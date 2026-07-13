@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 import networkx as nx
 
@@ -15,8 +15,6 @@ from chaosrank_engine.parser.incidents import ServiceIncidents
 
 logger = logging.getLogger(__name__)
 
-# Minimum incident count for statistically stable z-score normalization
-# Derived from algorithm.md §5.5 — below 10 services interpret directionally
 MIN_RELIABLE_N = 10
 
 # Days after which a graph observation is considered stale
@@ -197,7 +195,7 @@ def _age_component(last_observed: datetime | None) -> float:
     if last_observed is None:
         return 0.0
 
-    days_old = (datetime.utcnow() - last_observed).total_seconds() / 86400
+    days_old = (datetime.now(timezone.utc) - last_observed).total_seconds() / 86400
     return min(days_old / STALENESS_THRESHOLD_DAYS, 1.0)
 
 

@@ -1,3 +1,4 @@
+
 import logging
 
 import networkx as nx
@@ -8,8 +9,6 @@ DEFAULT_W_PR = 0.5
 DEFAULT_W_OD = 0.5
 DEFAULT_ASYNC_WEIGHT_FACTOR = 0.5
 
-# Default w_bc injected when betweenness is enabled but w_bc is not provided.
-# w_pr and w_od are scaled proportionally to absorb it.
 DEFAULT_W_BC = 0.2
 
 ASYNC_SERVICE_PATTERNS = ("kafka", "sqs", "rabbitmq", "pubsub", "nats", "kinesis")
@@ -46,8 +45,6 @@ def compute_blast_radius(
 
     _warn_async_blindspot(G, async_deps_provided)
 
-    # Apply async_weight_factor to async edges.
-    # Returns G unchanged if no async edges or factor == 1.0.
     G_scored = _apply_async_weight(G, async_weight_factor)
 
     # PageRank

@@ -8,9 +8,8 @@ import logging
 from datetime import datetime, timezone
 
 import networkx as nx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
-from chaosrank_engine.api.auth import require_api_key
 from chaosrank_engine.api.models import (
     AdaptiveRankRequest,
     AdaptiveRankResponse,
@@ -26,8 +25,6 @@ from chaosrank_engine.parser.incidents import Incident, ServiceIncidents
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Global AdaptiveRanker instance — state persists across requests.
-# In a multi-worker deployment, use a shared Redis-backed store instead.
 _RANKER = AdaptiveRanker()
 
 
@@ -67,8 +64,8 @@ def _build_incidents(incidents_map: dict) -> dict[str, ServiceIncidents]:
 
 @router.post("/adaptive/rank", response_model=AdaptiveRankResponse)
 async def adaptive_rank(
+    request: Request,
     req: AdaptiveRankRequest,
-    _: str = Depends(require_api_key),
 ) -> AdaptiveRankResponse:
     """Perform risk ranking using live alpha/beta weights and adaptive logic."""
     G = _build_graph(req.graph.edges)
@@ -99,7 +96,7 @@ async def adaptive_rank(
         )
     except Exception as exc:
         logger.exception("adaptive rank failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Internal scoring error. See server logs.") from exc
 
     if req.config.top_n > 0:
         ranked_raw = ranked_raw[: req.config.top_n]
@@ -122,8 +119,8 @@ async def adaptive_rank(
 
 @router.post("/adaptive/outcome", response_model=OutcomeResponse)
 async def record_outcome(
+    request: Request,
     req: OutcomeRequest,
-    _: str = Depends(require_api_key),
 ) -> OutcomeResponse:
     """Record an experiment outcome and update the global adaptive weights."""
     try:
@@ -154,7 +151,7 @@ async def record_outcome(
         )
     except Exception as exc:
         logger.exception("record_outcome failed")
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+        raise HTTPException(status_code=500, detail="Internal error recording outcome. See server logs.") from exc
 
     return OutcomeResponse(
         new_alpha=_RANKER.alpha,
@@ -164,5 +161,5 @@ async def record_outcome(
 
 
 @router.get("/adaptive/summary")
-async def adaptive_summary(_: str = Depends(require_api_key)) -> dict:
+async def adaptive_summary() -> dict:
     return _RANKER.summary()

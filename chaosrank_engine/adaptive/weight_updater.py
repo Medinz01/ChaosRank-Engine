@@ -18,8 +18,8 @@ ALPHA_MAX = 0.9
 # Default learning rate — conservative to prevent single-outcome overfitting
 DEFAULT_LEARNING_RATE = 0.05
 
-# Minimum outcomes before updates are applied
-MIN_OUTCOMES_BEFORE_UPDATE = 3
+# Minimum outcomes before updates are applied (set to 1 to avoid cold-start stagnation)
+MIN_OUTCOMES_BEFORE_UPDATE = 1
 
 
 @dataclass
