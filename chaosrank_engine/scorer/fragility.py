@@ -1,3 +1,4 @@
+
 """Fragility scoring logic for ChaosRank.
 Computes a normalized vulnerability score based on incident history and traffic volume.
 """
@@ -155,19 +156,30 @@ def compute_fragility(
 
 
 def _zscore_normalize(raw: dict[str, float]) -> dict[str, float]:
-    """Normalize raw scores to a [0, 1] range using Z-scores clamped at +/- 3 sigma."""
+    """Normalize raw scores to a [0, 1] range using Z-scores clamped at +/- 3 sigma.
+    Dynamically scales the bounds for smaller topologies (N < 10) so they can reach 1.0.
+    """
     if not raw:
         return {}
 
     values = list(raw.values())
-    mean = sum(values) / len(values)
-    stddev = math.sqrt(sum((v - mean) ** 2 for v in values) / len(values))
+    n = len(values)
+    mean = sum(values) / n
+    stddev = math.sqrt(sum((v - mean) ** 2 for v in values) / n)
 
     if stddev == 0:
         logger.warning("Fragility scores are uniform. Incident data may be insufficient.")
         return {k: 0.5 for k in raw}
 
-    return {
-        service: (max(-3.0, min(3.0, (val - mean) / stddev)) + 3.0) / 6.0
-        for service, val in raw.items()
-    }
+    if n >= 10:
+        return {
+            service: (max(-3.0, min(3.0, (val - mean) / stddev)) + 3.0) / 6.0
+            for service, val in raw.items()
+        }
+    else:
+        z_scores = {service: (val - mean) / stddev for service, val in raw.items()}
+        max_abs_z = min(3.0, max(abs(z) for z in z_scores.values()))
+        return {
+            service: (max(-max_abs_z, min(max_abs_z, z)) + max_abs_z) / (2 * max_abs_z)
+            for service, z in z_scores.items()
+        }

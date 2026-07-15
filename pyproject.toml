@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chaosrank-engine"
-version = "0.2.2"
+version = "0.2.3"
 description = "ChaosRank scoring engine — risk-driven chaos experiment scheduler"
 requires-python = ">=3.11"
 license = {text = "Business Source License 1.1"}

@@ -7,6 +7,13 @@ ChaosRank Engine follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 ---
 
+## [0.2.3] — 2026-07-15
+
+### Fixed
+- **Small-N Normalization**: Fixed an issue in `fragility.py` where the Z-score normalization clamped the maximum fragility score below 1.0 for small microservice topologies (N < 10). The algorithm now dynamically scales the normalization bounds based on the sample's maximum absolute deviation, allowing the operational fragility signal to properly compete with the structural blast radius signal in small graphs.
+
+---
+
 ## [0.2.2] — 2026-07-13
 
 ### Added
